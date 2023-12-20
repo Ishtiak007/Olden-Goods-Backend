@@ -34,6 +34,7 @@ async function run() {
    
     const productsCollection = client.db("oldenGoodsDB").collection("products");
     const categoryCollection = client.db("oldenGoodsDB").collection("category");
+    const reviewsCollection = client.db("oldenGoodsDB").collection("userReview");
 
 
 
@@ -46,6 +47,11 @@ async function run() {
     // Category Get API
     app.get('/category',async(req,res)=>{
         const result = await categoryCollection.find().toArray();
+        res.send(result)
+    });
+    // reviews Get API
+    app.get('/userReview',async(req,res)=>{
+        const result = await reviewsCollection.find().toArray();
         res.send(result)
     });
 
