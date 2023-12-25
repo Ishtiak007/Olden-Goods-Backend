@@ -10,7 +10,7 @@ app.use(express.json());
 
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.s1bw0ez.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -35,7 +35,23 @@ async function run() {
     const productsCollection = client.db("oldenGoodsDB").collection("products");
     const categoryCollection = client.db("oldenGoodsDB").collection("category");
     const reviewsCollection = client.db("oldenGoodsDB").collection("userReview");
+    const usersCollection = client.db("oldenGoodsDB").collection("users");
 
+
+
+    
+    // Category Get API
+    app.get('/category',async(req,res)=>{
+      const result = await categoryCollection.find().toArray();
+      res.send(result)
+    });
+   // reviews Get API
+   app.get('/userReview',async(req,res)=>{
+      const result = await reviewsCollection.find().toArray();
+      res.send(result)
+   });
+
+   
 
 
 
@@ -44,16 +60,26 @@ async function run() {
         const result = await productsCollection.find().toArray();
         res.send(result)
     });
-    // Category Get API
-    app.get('/category',async(req,res)=>{
-        const result = await categoryCollection.find().toArray();
-        res.send(result)
-    });
-    // reviews Get API
-    app.get('/userReview',async(req,res)=>{
-        const result = await reviewsCollection.find().toArray();
-        res.send(result)
-    });
+    app.get('/products/:id', async(req,res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)}
+      const result = await productsCollection.findOne(query);
+      res.send(result);
+  });
+
+
+
+  // USER relate API
+    app.post('/users',async(req,res)=>{
+      const user = req.body;
+    const query ={email: user.email}
+    const existingUser = await usersCollection.findOne(query);
+    if(existingUser){
+      return res.send({message: 'This User already exists', insertedId : null})
+    }
+    const result = await usersCollection.insertOne(user);
+    res.send(result);
+  });
 
 
 
