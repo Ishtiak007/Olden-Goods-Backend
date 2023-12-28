@@ -2,6 +2,7 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 require('dotenv').config();
+var jwt = require('jsonwebtoken');
 const port = process.env.PORT || 5000;
 
 //middleware
@@ -39,6 +40,29 @@ async function run() {
     const buyerProductsCollection = client.db("oldenGoodsDB").collection("buyerProducts");
 
 
+      //JWT RELATED API
+    app.post('/jwt',async(req,res)=>{
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET,{expiresIn:'1h'});
+      res.send({token});
+  });
+  //MIDDLEWARE
+  const verifyToken =(req,res,next)=>{
+      // console.log('inside varified token',req.headers.authorization);
+      if(!req.headers.authorization){
+      return res.status(401).send({message:'unauthorized access'});
+    }
+    const token = req.headers.authorization.split(' ')[1];
+    jwt.verify(token,process.env.ACCESS_TOKEN_SECRET,(err,decoded)=>{
+      if(err){
+        return res.status(401).send({message: 'unauthorized access'})
+      }
+      req.decoded=decoded;
+      next();
+    })
+  }
+
+
 
     
     // Category Get API
@@ -57,7 +81,7 @@ async function run() {
 
 
     // Products related API
-    app.post('/products',async(req,res)=>{
+    app.post('/products',verifyToken,async(req,res)=>{
       const product = req.body;
       const result =await productsCollection.insertOne(product);
       res.send(result);
@@ -87,12 +111,36 @@ async function run() {
      const result = await productsCollection.find(query).toArray();
      res.send(result);
   });
-  app.delete('/products/:id', async(req,res)=>{
+  app.delete('/products/:id',verifyToken, async(req,res)=>{
     const id = req.params.id;
     const query = {_id: new ObjectId(id)}
     const result = await productsCollection.deleteOne(query);
     res.send(result);
-});
+  });
+  app.patch('/products/:id', async(req,res)=>{
+    const product = req.body;
+    const id = req.params.id;
+    const filter = {_id : new ObjectId(id)}
+    const updatedDoc={
+      $set:{
+        image1 : product.image1,
+        image2 : product.image2,
+        image3 : product.image3,
+        image4 : product.image4,
+        name : product.name,
+        age : product.age,
+        date : product.date,
+        category : product.category,
+        shortDescription : product.shortDescription,
+        longDescription : product.longDescription,
+        price : product.price,
+        uploaderPhone : product.uploaderPhone,
+        uploaderLocation : product.uploaderLocation
+      }
+    }
+    const result = await productsCollection.updateOne(filter,updatedDoc); //name, age, date, category, shortDescription, longDescription, price, uploaderPhone, uploaderLocation
+    res.send(result);
+  })
 
 
 
@@ -108,6 +156,27 @@ async function run() {
     const result = await usersCollection.insertOne(user);
     res.send(result);
   });
+    app.get('/users',verifyToken, async(req,res)=>{
+    const result = await usersCollection.find().toArray();
+    res.send(result);
+   });
+   app.delete('/users/:id',verifyToken,async(req,res)=>{
+    const id = req.params.id;
+    const query = {_id : new ObjectId(id)};
+    const result = await usersCollection.deleteOne(query);
+    res.send(result);
+   });
+   app.patch('/users/admin/:id',verifyToken, async(req,res)=>{
+    const id = req.params.id;
+    const filter = {_id: new ObjectId(id)};
+    const updatedDoc = {
+      $set :{
+        role : 'admin'
+      }
+    }
+    const result = await usersCollection.updateOne(filter,updatedDoc);
+    res.send(result);
+   });
 
 
 
@@ -133,6 +202,8 @@ async function run() {
      const result = await buyerProductsCollection.deleteOne(query);
      res.send(result)
    });
+   
+   
 
 
 
